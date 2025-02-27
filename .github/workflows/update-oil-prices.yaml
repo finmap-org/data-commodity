@@ -7,8 +7,8 @@ name: 'Update Oil Prices'
 # https://api.eia.gov/v2/seriesid/PET.RBRTE.D?api_key=
 
 on:
-  # schedule:
-  # - cron: '40 00 * * 2-6'
+  schedule:
+  - cron: '40 00 * * 2-6'
   workflow_dispatch:
     inputs:
       start_date:
@@ -57,14 +57,14 @@ jobs:
     - name: Merge datafiles
       run: |
         jq '.response.data | map({key: .period, value: .value}) | from_entries' brent.json.TMP > brent.json
-        cp data/commodity/brent.json brent.json.TMP
-        jq -s 'add' brent.json.TMP brent.json > data/commodity/brent.json
+        cp marketdata/brent.json brent.json.TMP
+        jq -s 'add' brent.json.TMP brent.json > marketdata/brent.json
         rm brent.json.TMP brent.json
 
     - name: Commit and push
       run: |
         git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
         git config --global user.email "${{ env.CI_COMMIT_AUTHOR_EMAIL }}"
-        git add data/commodity/*
+        git add marketdata/*
         git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}"
         git push
