@@ -1,0 +1,70 @@
+name: 'Update Oil Prices'
+# https://www.eia.gov/opendata/documentation.php
+# https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm
+# 
+# https://www.eia.gov/opendata/browser/petroleum/pri/spt?frequency=daily&data=value;&facets=series;product;&series=RBRTE;&product=EPCBRENT;&start=2025-02-05&sortColumn=period;&sortDirection=asc;
+# https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RBRTE&facets[product][]=EPCBRENT&start=2007-01-06&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000&api_key=
+# https://api.eia.gov/v2/seriesid/PET.RBRTE.D?api_key=
+
+on:
+  # schedule:
+  # - cron: '40 00 * * 2-6'
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Start date'
+        required: true
+        type: string
+        default: '2025-02-14'
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    env:
+      CI_COMMIT_AUTHOR: github-actions[bot]
+      CI_COMMIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+      CI_COMMIT_MESSAGE: Update Oil Prices
+      CI_URL: https://api.eia.gov/v2/petroleum/pri/spt/data
+      CI_USER_AGENT: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Read inputs
+      run: |
+        if [ -z "${{ inputs.start_date }}" ]; then
+          START_DATE=$(date --utc -d 'yesterday' +%Y-%m-%d)
+        else
+          START_DATE="${{ inputs.start_date }}"
+        fi
+        echo "START_DATE=$START_DATE" >> $GITHUB_ENV
+
+    - name: Brent Oil
+      run: |
+        response_code=$(curl --silent \
+          --output "brent.json.TMP" \
+          --write-out "%{http_code}" \
+          --user-agent "${{ env.CI_USER_AGENT }}" \
+          "${{ env.CI_URL }}/?frequency=daily&data\[0\]=value&facets\[series\]\[\]=RBRTE&facets\[product\]\[\]=EPCBRENT&start=${START_DATE}&sort\[0\]\[column\]=period&sort\[0\]\[direction\]=asc&offset=0&length=5000&api_key=${{ secrets.EIA_GOV_API_KEY }}")
+        if [ "${response_code}" -ne 200 ]; then
+          echo "Request failed with response code: ${response_code}"
+          exit 1
+        fi
+
+    - name: Merge datafiles
+      run: |
+        jq '.response.data | map({key: .period, value: .value}) | from_entries' brent.json.TMP > brent.json
+        cp data/commodity/brent.json brent.json.TMP
+        jq -s 'add' brent.json.TMP brent.json > data/commodity/brent.json
+        rm brent.json.TMP brent.json
+
+    - name: Commit and push
+      run: |
+        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+        git config --global user.email "${{ env.CI_COMMIT_AUTHOR_EMAIL }}"
+        git add data/commodity/*
+        git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}"
+        git push
