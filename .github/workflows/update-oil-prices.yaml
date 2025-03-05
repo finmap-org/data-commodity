@@ -62,6 +62,7 @@ jobs:
         rm brent.json.TMP brent.json
 
     - name: Commit and push
+      continue-on-error: true
       run: |
         git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
         git config --global user.email "${{ env.CI_COMMIT_AUTHOR_EMAIL }}"
