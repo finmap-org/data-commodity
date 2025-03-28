@@ -36,7 +36,7 @@ jobs:
     - name: Read inputs
       run: |
         if [ -z "${{ inputs.start_date }}" ]; then
-          START_DATE=$(date --utc -d 'yesterday' +%Y-%m-%d)
+          START_DATE="$(date --utc -d 'yesterday' +%Y-%m-%d)"
         else
           START_DATE="${{ inputs.start_date }}"
         fi
