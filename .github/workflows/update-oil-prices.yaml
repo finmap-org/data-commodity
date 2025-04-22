@@ -54,6 +54,11 @@ jobs:
           exit 1
         fi
 
+    - name: Debug
+      if: ${{ github.event_name == 'schedule' }}
+      run: |
+        cat brent.json.TMP
+
     - name: Merge datafiles
       run: |
         jq '.response.data | map({key: .period, value: .value}) | from_entries' brent.json.TMP > brent.json
