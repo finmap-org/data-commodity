@@ -8,14 +8,14 @@ name: 'Update Oil Prices'
 
 on:
   schedule:
-  - cron: '40 10 * * 2-6'
+  - cron: '40 10 * * 6'
   workflow_dispatch:
     inputs:
       start_date:
         description: 'Start date'
         required: true
         type: string
-        default: '2025-02-14'
+        default: '2025-06-16'
 
 permissions:
   contents: write
@@ -36,7 +36,7 @@ jobs:
     - name: Read inputs
       run: |
         if [ -z "${{ inputs.start_date }}" ]; then
-          START_DATE="$(date --utc -d 'yesterday' +%Y-%m-%d)"
+          START_DATE="$(date --utc -d '7 days ago' +%Y-%m-%d)"
         else
           START_DATE="${{ inputs.start_date }}"
         fi
